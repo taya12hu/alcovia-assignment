@@ -1,0 +1,83 @@
+{
+  "name": "02 Meta Ads daily sync -> analytics DB",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [ { "field": "cronExpression", "expression": "15 6 * * *" } ] } },
+      "id": "b2f0c002-0000-4000-8000-000000000001",
+      "name": "Every day 06:15 IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v21.0/act_{{ $env.META_AD_ACCOUNT_ID }}/insights",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "facebookGraphApi",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [
+          { "name": "level", "value": "ad" },
+          { "name": "time_increment", "value": "1" },
+          { "name": "date_preset", "value": "last_3d" },
+          { "name": "fields", "value": "date_start,ad_id,campaign_id,spend,impressions,inline_link_clicks,frequency,actions" },
+          { "name": "limit", "value": "500" }
+        ] },
+        "options": { "pagination": { "pagination": { "paginationMode": "responseContainsNextURL", "nextURL": "={{ $response.body.paging.next }}", "paginationCompleteWhen": "other", "completeExpression": "={{ !$response.body.paging || !$response.body.paging.next }}" } } }
+      },
+      "id": "b2f0c002-0000-4000-8000-000000000002",
+      "name": "Get ad insights (last 3 days)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 300],
+      "credentials": { "facebookGraphApi": { "id": "REPLACE_ME", "name": "Meta Ads" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the last 3 days, not just yesterday: Meta revises recent numbers for ~72 hours.\n// The upsert below overwrites those days, so re-runs never double count.\nconst out = [];\nfor (const page of $input.all()) for (const r of page.json.data || []) {\n  const act = k => Number((r.actions || []).find(a => a.action_type === k)?.value || 0);\n  out.push({ json: {\n    stat_date: r.date_start, creative_id: r.ad_id, spend: Number(r.spend),\n    impressions: Number(r.impressions), clicks: Number(r.inline_link_clicks || 0),\n    frequency_7d: Number(r.frequency), lp_views: act('landing_page_view')\n  } });\n}\nif (!out.length) throw new Error('Meta returned no rows. Check token and ad account.');\nreturn out;"
+      },
+      "id": "b2f0c002-0000-4000-8000-000000000003",
+      "name": "Shape rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO ad_daily (stat_date, creative_id, spend, impressions, clicks, frequency_7d, lp_views, lp_bounces, lp_load_ms)\nVALUES ($1, $2, $3, $4, $5, $6, $7, 0, 0)\nON CONFLICT (stat_date, creative_id) DO UPDATE SET\n  spend = EXCLUDED.spend, impressions = EXCLUDED.impressions, clicks = EXCLUDED.clicks,\n  frequency_7d = EXCLUDED.frequency_7d, lp_views = EXCLUDED.lp_views;\n-- lp_bounces and lp_load_ms are filled by workflow 03 from website analytics",
+        "options": { "queryReplacement": "={{ [$json.stat_date, $json.creative_id, $json.spend, $json.impressions, $json.clicks, $json.frequency_7d, $json.lp_views] }}" }
+      },
+      "id": "b2f0c002-0000-4000-8000-000000000004",
+      "name": "Upsert ad_daily",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [660, 300],
+      "credentials": { "postgres": { "id": "REPLACE_ME", "name": "Alcovia analytics DB" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Reconciliation: Meta's account total for yesterday must match what we stored (within Rs 1)\nSELECT ROUND(SUM(spend)) AS stored_spend FROM ad_daily WHERE stat_date = CURRENT_DATE - 1;"
+      },
+      "id": "b2f0c002-0000-4000-8000-000000000005",
+      "name": "Check stored spend",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 300],
+      "credentials": { "postgres": { "id": "REPLACE_ME", "name": "Alcovia analytics DB" } },
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Every day 06:15 IST": { "main": [[{ "node": "Get ad insights (last 3 days)", "type": "main", "index": 0 }]] },
+    "Get ad insights (last 3 days)": { "main": [[{ "node": "Shape rows", "type": "main", "index": 0 }]] },
+    "Shape rows": { "main": [[{ "node": "Upsert ad_daily", "type": "main", "index": 0 }]] },
+    "Upsert ad_daily": { "main": [[{ "node": "Check stored spend", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Kolkata" },
+  "pinData": {},
+  "meta": { "note": "Prototype export. Credentials are placeholders. Not yet run against a live Meta ad account." }
+}

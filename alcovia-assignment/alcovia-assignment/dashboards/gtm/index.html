@@ -1,0 +1,398 @@
+<meta charset="utf-8">
+<title>Alcovia GTM Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky control bar, then four stacked sections read top-down: money -> funnel -> ads -> follow-ups */
+:root {
+  --bg: #f5f6f9; --surface: #ffffff; --ink: #151821; --ink-2: #4a5161; --muted: #737b8c; --line: #e2e5ec; --line-2: #eef0f4;
+  --accent: #4b3fc8; --accent-soft: #ecebfb;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --good: #1d7f46; --good-bg: #e5f4ea; --warn: #9a6200; --warn-bg: #fdf1d8; --serious: #b54708; --serious-bg: #fde9dc;
+  --bad: #b42318; --bad-bg: #fde4e2; --neutral-bg: #eef0f4;
+  --f-ui: "Instrument Sans", "Segoe UI", system-ui, sans-serif; --f-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111318; --surface: #191c23; --ink: #eef0f5; --ink-2: #b7bdca; --muted: #8b93a4; --line: #2b303b; --line-2: #22262f;
+  --accent: #9a90f2; --accent-soft: #26233f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --good: #5cc98a; --good-bg: #173324; --warn: #e6b450; --warn-bg: #3a2e12; --serious: #f08a4b; --serious-bg: #3d2416;
+  --bad: #f2867d; --bad-bg: #3f1d1b; --neutral-bg: #262a33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c23; --ink: #eef0f5; --ink-2: #b7bdca; --muted: #8b93a4; --line: #2b303b; --line-2: #22262f;
+  --accent: #9a90f2; --accent-soft: #26233f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --good: #5cc98a; --good-bg: #173324; --warn: #e6b450; --warn-bg: #3a2e12; --serious: #f08a4b; --serious-bg: #3d2416;
+  --bad: #f2867d; --bad-bg: #3f1d1b; --neutral-bg: #262a33; color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+main > section { min-width: 0 }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--f-ui); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface) }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+header.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line) }
+header .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; padding-block: 12px }
+.brand h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em }
+.brand p { margin: 0; color: var(--muted); font-size: 12.5px }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: var(--warn-bg); color: var(--warn); margin-left: 6px; vertical-align: 2px }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.controls label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em }
+select, input[type=date] { font: 500 14px var(--f-ui); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-height: 36px }
+select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+#custom { display: flex; gap: 6px; align-items: center }
+.range-note { width: 100%; color: var(--ink-2); font-size: 12.5px }
+
+main { display: grid; gap: 28px; padding-block: 20px 48px }
+section > h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); margin: 0 0 4px }
+section > .lede { margin: 0 0 12px; color: var(--muted); font-size: 13px; max-width: 75ch }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0 }
+.card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600 }
+.card h3 small { font-weight: 400; color: var(--muted); margin-left: 6px }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 12px; margin-bottom: 12px }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.tile .k { font-size: 12px; color: var(--muted); font-weight: 600 }
+.tile .v { font: 500 24px/1.15 var(--f-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em }
+.tile .s { font-size: 12.5px; color: var(--ink-2) }
+.tile.hero { grid-column: span 2 }
+.meter { height: 8px; background: var(--line-2); border-radius: 4px; overflow: hidden; margin-top: 6px }
+.meter > i { display: block; height: 100%; background: var(--accent); border-radius: 4px }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50% ; background: currentColor }
+.c-good { background: var(--good-bg); color: var(--good) } .c-warn { background: var(--warn-bg); color: var(--warn) }
+.c-serious { background: var(--serious-bg); color: var(--serious) } .c-bad { background: var(--bad-bg); color: var(--bad) }
+.c-neutral { background: var(--neutral-bg); color: var(--ink-2) }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 12px }
+.grid2b { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px }
+@media (max-width: 860px) { .grid2, .grid2b { grid-template-columns: 1fr } .tile.hero { grid-column: auto } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px }
+.legend span { display: inline-flex; gap: 6px; align-items: center }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block }
+.legend i.tick { height: 2px; width: 14px; border-radius: 0; background: var(--ink) }
+svg text { font-family: var(--f-ui); }
+.axis { fill: var(--muted); font-size: 11px }
+.gridline { stroke: var(--line-2) }
+
+.split { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 8px 0 12px }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13px }
+.kv dt { color: var(--ink-2); display: flex; gap: 6px; align-items: center }
+.kv dd { margin: 0; text-align: right }
+.kv i { width: 10px; height: 10px; border-radius: 2px; display: inline-block }
+
+.funnel { display: grid; gap: 7px }
+.fstep { display: grid; grid-template-columns: 150px minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: 13px }
+.fstep .lbl { color: var(--ink-2) }
+.fstep .track { height: 22px; background: var(--line-2); border-radius: 4px; position: relative }
+.fstep .fill { height: 100%; background: var(--s1); border-radius: 4px; min-width: 3px }
+.fstep .cnt { font-family: var(--f-num); text-align: right }
+.fstep .conv { font-size: 11.5px; color: var(--muted); grid-column: 2 / 4; margin-top: -4px }
+.fstep .conv b { color: var(--ink-2); font-weight: 600 }
+.fstep .conv.alert b { color: var(--bad) }
+@media (max-width: 520px) { .fstep { grid-template-columns: 104px minmax(0, 1fr) 48px } }
+.note { font-size: 12.5px; background: var(--warn-bg); color: var(--warn); padding: 8px 10px; border-radius: 8px; margin-top: 10px }
+.reasons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px }
+
+.tablewrap { overflow-x: auto; margin: 0 -16px; padding: 0 16px }
+table { width: 100%; border-collapse: collapse; font-size: 13px }
+th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap }
+td { padding: 9px 8px; border-bottom: 1px solid var(--line-2); vertical-align: top }
+td.r, th.r { text-align: right } td.num, td.r { font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap }
+td .why { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; max-width: 34ch; white-space: normal; font-family: var(--f-ui) }
+.flag { color: var(--bad); font-weight: 600 }
+.sub { color: var(--muted); font-size: 12px; display: block }
+.ads { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.ads li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2) }
+.ads li:last-child { border-bottom: 0 }
+.ads .bar { grid-column: 1 / 3; height: 4px; background: var(--line-2); border-radius: 2px }
+.ads .bar i { display: block; height: 100%; border-radius: 2px; background: var(--s1) }
+.adh { margin: 4px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted) }
+.empty { color: var(--muted); font-size: 13px; padding: 8px 0 }
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--ink); color: var(--surface); font-size: 12px; padding: 7px 9px; border-radius: 6px; max-width: 240px; line-height: 1.45 }
+#tip b { font-family: var(--f-num); font-weight: 500 }
+footer { color: var(--muted); font-size: 12px; padding-bottom: 32px }
+footer p { max-width: 90ch; margin: 4px 0 }
+@media (prefers-reduced-motion: no-preference) { .fill, .meter > i, .ads .bar i { transition: width .35s ease } }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Alcovia GTM Tracker <span class="tag">Synthetic data</span></h1>
+      <p id="asof">Revenue, funnel and ad health in one place</p>
+    </div>
+    <div class="controls">
+      <label for="period">Period</label>
+      <select id="period">
+        <option value="mtd">This month to date</option>
+        <option value="lm">Last month</option>
+        <option value="l30">Last 30 days</option>
+        <option value="l90">Last 90 days</option>
+        <option value="lq">Last quarter (Jul–Sep)</option>
+        <option value="ytd">Since April (year to date)</option>
+        <option value="custom">Custom dates…</option>
+      </select>
+      <span id="custom" hidden>
+        <input type="date" id="d0" aria-label="From date"> <span>to</span> <input type="date" id="d1" aria-label="To date">
+      </span>
+    </div>
+    <div class="range-note" id="rangeNote"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>Revenue</h2>
+    <p class="lede">Booked revenue counts an invoice the day it is raised and a workshop seat the day it is paid. Cash collected counts money that reached Razorpay. They differ when families pay late.</p>
+    <div class="tiles" id="tiles"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Booked revenue by month <small>vs monthly target</small></h3>
+        <div class="legend">
+          <span><i style="background:var(--s1)"></i>Full programme (new)</span>
+          <span><i style="background:var(--s2)"></i>3-month trial</span>
+          <span><i style="background:var(--s3)"></i>Renewal to full</span>
+          <span><i style="background:var(--s4)"></i>Workshops</span>
+          <span><i class="tick"></i>Target</span>
+        </div>
+        <div id="monthly"></div>
+      </div>
+      <div class="card">
+        <h3>Programme vs workshop <small>in this period</small></h3>
+        <div id="split"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lead funnel</h2>
+    <p class="lede">Every lead created in this period, followed to wherever it is today. Each parent is counted once (phone number is the duplicate check).</p>
+    <div class="grid2">
+      <div class="card"><h3>From ad to paid</h3><div class="funnel" id="funnel"></div><div id="maturing"></div></div>
+      <div class="card"><h3>Top metrics</h3><dl class="kv" id="fkpis"></dl>
+        <h3 style="margin-top:16px">Why leads dropped</h3><div class="reasons" id="reasons"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Campaign performance</h2>
+    <p class="lede">Each campaign gets one recommended action. Rules run in order and the first match wins: not enough spend, pause, fix landing page, refresh creative, scale.</p>
+    <div class="card" style="margin-bottom:12px">
+      <h3>Campaigns and what to do next</h3>
+      <div class="tablewrap"><table id="camps"></table></div>
+    </div>
+    <div class="grid2b">
+      <div class="card"><h3>Ads by click-through rate <small>min 2,000 views</small></h3><div id="ads"></div></div>
+      <div class="card"><h3>Landing page health</h3><div class="tablewrap"><table id="lps"></table></div>
+        <p class="sub" style="margin-top:8px">Targets: under 3.0 s to load, under 55% leaving at once.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Follow-ups</h2>
+    <p class="lede">Money and renewals that need a call this week. Both lists are as of the last day of the period.</p>
+    <div class="grid2b">
+      <div class="card"><h3>Invoices raised, not paid</h3><div class="tablewrap"><table id="unpaid"></table></div></div>
+      <div class="card"><h3>3-month trials ending in the next 30 days</h3><div class="tablewrap"><table id="renew"></table></div></div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p><b>About this data.</b> Every name and number is made up to show how the tracker works. In production the same page reads one database that n8n fills from ClickUp (leads), Razorpay (payments) and Meta Ads (spend, clicks, frequency). Formulas match <span class="num">sql/gtm_kpis.sql</span>, and a test checks that they agree.</p>
+  <p>Targets used: ₹2,500 per qualified lead; workshop ads should return 3× their spend in seats.</p>
+</footer>
+<div id="tip" hidden></div>
+
+<script src="data.js"></script>
+<script src="metrics.js"></script>
+<script>
+(function () {
+  const D = window.DATA, G = window.GTM, AS_OF = D.asOf;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const inr = n => "₹" + Math.round(n).toLocaleString("en-IN");
+  const lakh = n => n >= 1e5 ? "₹" + (n / 1e5).toFixed(n >= 1e7 ? 0 : 1) + "L" : inr(n);
+  const pct = (n, d = 0) => n == null ? "–" : n.toFixed(d) + "%";
+  const fmtD = iso => new Date(iso + "T00:00:00Z").toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+  const fmtDY = iso => new Date(iso + "T00:00:00Z").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthName = m => MON[+m.slice(5, 7) - 1];
+
+  $("asof").textContent = "Data as of " + fmtDY(AS_OF) + " · built to show the tracker, not real results";
+
+  function rangeFor(key) {
+    const t = AS_OF, m0 = t.slice(0, 8) + "01";
+    switch (key) {
+      case "mtd": return [m0, t];
+      case "lm": { const e = G.addDays(m0, -1); return [e.slice(0, 8) + "01", e]; }
+      case "l30": return [G.addDays(t, -29), t];
+      case "l90": return [G.addDays(t, -89), t];
+      case "lq": return ["2026-07-01", "2026-09-30"];
+      case "ytd": return ["2026-04-01", t];
+    }
+  }
+
+  // ---------- tooltip
+  const tip = $("tip");
+  function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; moveTip(e); }
+  function moveTip(e) {
+    const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8), y = Math.max(8, e.clientY - tip.offsetHeight - 10);
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  document.addEventListener("mousemove", e => { if (!tip.hidden) moveTip(e); });
+  function bindTips(root) {
+    root.querySelectorAll("[data-tip]").forEach(el => {
+      el.addEventListener("mouseenter", e => showTip(e, el.getAttribute("data-tip")));
+      el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      el.addEventListener("focus", () => { const r = el.getBoundingClientRect(); showTip({ clientX: r.left + r.width / 2, clientY: r.top }, el.getAttribute("data-tip")); });
+      el.addEventListener("blur", () => { tip.hidden = true; });
+    });
+  }
+
+  // ---------- render
+  function render(d0, d1) {
+    const g = G.computeGTM(D, d0, d1), r = g.revenue, f = g.funnel;
+    const days = G.dayDiff(d1, d0) + 1;
+    $("rangeNote").textContent = `Showing ${fmtDY(d0)} to ${fmtDY(d1)} (${days} days). Unpaid invoices and renewals are as of ${fmtDY(g.asOf)}.`;
+
+    // tiles
+    const pctT = r.pctOfTarget, tone = pctT >= 100 ? "c-good" : pctT >= 85 ? "c-warn" : "c-bad";
+    const unpaidAmt = g.unpaid.reduce((s, u) => s + u.amount, 0), overdue = g.unpaid.filter(u => u.overdue > 0);
+    $("tiles").innerHTML = `
+      <div class="tile hero"><span class="k">Booked revenue vs target</span>
+        <span class="v">${inr(r.booked)} <span class="chip ${tone}">${pct(pctT)} of target</span></span>
+        <span class="s">Target for these ${days} days: <span class="num">${inr(r.target)}</span></span>
+        <div class="meter" role="img" aria-label="${pct(pctT)} of target"><i style="width:${Math.min(100, pctT || 0)}%"></i></div></div>
+      <div class="tile"><span class="k">Cash collected</span><span class="v">${lakh(r.cash)}</span>
+        <span class="s">${r.booked ? pct(r.cash / r.booked * 100) : "–"} of booked revenue</span></div>
+      <div class="tile"><span class="k">New students onboarded</span><span class="v">${r.onboarded}</span>
+        <span class="s">${r.trialSignups} trial · ${r.fullSignups} full programme</span></div>
+      <div class="tile"><span class="k">Workshop revenue</span><span class="v">${lakh(r.workshop)}</span>
+        <span class="s">${r.workshopSeats} seats at ₹3,999</span></div>
+      <div class="tile"><span class="k">Unpaid invoices</span><span class="v">${lakh(unpaidAmt)}</span>
+        <span class="s">${g.unpaid.length} invoices · <span class="${overdue.length ? "flag" : ""}">${overdue.length} past due</span></span></div>
+      <div class="tile"><span class="k">Trial renewals due (30 days)</span><span class="v">${g.renewals.length}</span>
+        <span class="s">${g.renewals.length ? "Next: " + esc(g.renewals[0].name) + " on " + fmtD(g.renewals[0].end) : "None due"}</span></div>`;
+
+    // monthly stacked bars
+    const M = g.monthly, W = 640, H = 250, pl = 48, pr = 8, pt = 10, pb = 26;
+    const max = Math.max(...M.map(m => Math.max(m.full + m.trial + m.renewal + m.workshop, m.target))) * 1.08;
+    const step = max > 1.2e6 ? 5e5 : 2.5e5, yMax = Math.ceil(max / step) * step;
+    const y = v => pt + (H - pt - pb) * (1 - v / yMax), bw = (W - pl - pr) / M.length;
+    let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Monthly booked revenue by line against target">`;
+    for (let v = 0; v <= yMax; v += step) s += `<line class="gridline" x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${pl - 6}" y="${y(v) + 4}" text-anchor="end">${v ? "₹" + v / 1e5 + "L" : "0"}</text>`;
+    M.forEach((m, i) => {
+      const x = pl + i * bw + bw * 0.2, w = bw * 0.6, ms = m.month + "-01", me = m.month + "-31";
+      const inSel = ms <= d1 && me >= d0;
+      let base = 0;
+      const segs = [["full", "--s1", "Full programme (new)"], ["trial", "--s2", "3-month trial"], ["renewal", "--s3", "Renewal"], ["workshop", "--s4", "Workshops"]];
+      const total = m.full + m.trial + m.renewal + m.workshop;
+      const tipH = `<b>${monthName(m.month)} ${m.month.slice(0, 4)}${m.partial ? " (to date)" : ""}</b><br>` + segs.map(sg => `${sg[2]}: <b>${inr(m[sg[0]])}</b>`).join("<br>") + `<br>Total: <b>${inr(total)}</b> · Target: <b>${inr(m.target)}</b>`;
+      s += `<g opacity="${inSel ? 1 : 0.38}" tabindex="0" data-tip="${esc(tipH)}">`;
+      s += `<rect x="${x - 4}" y="${pt}" width="${w + 8}" height="${H - pt - pb}" fill="transparent"/>`;
+      segs.forEach(([k, c]) => {
+        const v = m[k]; if (!v) return;
+        const y0 = y(base), y1 = y(base + v), h = y0 - y1;
+        s += `<rect x="${x}" y="${y1 + 1}" width="${w}" height="${Math.max(0, h - 2)}" fill="var(${c})" rx="2"/>`;
+        base += v;
+      });
+      s += `<line x1="${x - 5}" x2="${x + w + 5}" y1="${y(m.target)}" y2="${y(m.target)}" stroke="var(--ink)" stroke-width="2"/>`;
+      s += `<text class="axis" x="${x + w / 2}" y="${H - 8}" text-anchor="middle">${monthName(m.month)}${m.partial ? "*" : ""}</text></g>`;
+    });
+    s += `</svg><p class="sub">Faded months are outside the selected period. *Month to date.</p>`;
+    $("monthly").innerHTML = s;
+
+    // split
+    const parts = [["Full programme (new)", r.fullNewRevenue, "--s1", r.fullSignups + " families"], ["3-month trial", r.trialRevenue, "--s2", r.trialSignups + " families"],
+                   ["Renewal to full", r.renewalRevenue, "--s3", r.renewals + " families"], ["Workshops", r.workshop, "--s4", r.workshopSeats + " seats"]];
+    const tot = r.booked || 1;
+    $("split").innerHTML = `
+      <div class="kv"><dt>Programme</dt><dd class="num">${inr(r.programme)} · ${pct(r.programme / tot * 100)}</dd>
+        <dt>Workshops</dt><dd class="num">${inr(r.workshop)} · ${pct(r.workshop / tot * 100)}</dd></div>
+      <div class="split" role="img" aria-label="Revenue split by line">${parts.filter(p => p[1] > 0).map(p => `<span tabindex="0" data-tip="${esc(p[0] + ": <b>" + inr(p[1]) + "</b>")}" style="flex:${p[1]};background:var(${p[2]})"></span>`).join("")}</div>
+      <dl class="kv">${parts.map(p => `<dt><i style="background:var(${p[2]})"></i>${p[0]} <span class="sub" style="display:inline">${p[3]}</span></dt><dd class="num">${inr(p[1])}</dd>`).join("")}</dl>`;
+
+    // funnel
+    const steps = [["Leads", f.total, null], ["Qualified", f.qualified, "qualified"], ["Discovery call booked", f.booked, "booked a call"],
+                   ["Showed up to call", f.showed, "show-up rate"], ["Ambition interview", f.interviews, "went on to interview"],
+                   ["Architect session", f.architect, "reached architect session"], ["Paid and joined", f.converted, "paid"]];
+    $("funnel").innerHTML = f.total ? steps.map((st, i) => {
+      let conv = "";
+      if (i) {
+        const prev = i === 3 ? f.callsHappened : steps[i - 1][1];
+        const rate = prev ? st[1] / prev * 100 : null;
+        const alert = (i === 3 && rate < 65) || (i === 4 && rate < 70);
+        conv = `<div class="conv ${alert ? "alert" : ""}"><b>${pct(rate)}</b> ${st[2]}${i === 3 ? ` (${f.callsHappened} calls held so far)` : ""}${i === 4 ? ` · <b>${pct(f.dropAfterDiscovery)}</b> dropped after the call` : ""}</div>`;
+      }
+      return `<div class="fstep"><span class="lbl">${st[0]}</span><span class="track"><span class="fill" style="display:block;width:${st[1] / f.total * 100}%"></span></span><span class="cnt">${st[1]}</span>${conv}</div>`;
+    }).join("") : `<p class="empty">No leads were created in this period.</p>`;
+    $("maturing").innerHTML = g.cohortMaturing && f.open ? `<div class="note">${f.open} of these leads are still moving through the funnel. Conversion for this period will rise as they finish; compare full months for a fair read.</div>` : "";
+    $("fkpis").innerHTML = `
+      <dt>Cost per qualified lead (Meta)</dt><dd class="num">${f.cpql ? inr(f.cpql) : "–"} <span class="chip ${f.cpql == null ? "c-neutral" : f.cpql <= G.TARGET_CPQL ? "c-good" : "c-bad"}">${f.cpql == null ? "n/a" : f.cpql <= G.TARGET_CPQL ? "on target" : "over target"}</span></dd>
+      <dt>Programme ad spend</dt><dd class="num">${inr(f.programmeSpend)}</dd>
+      <dt>Programme conversion (lead to paid)</dt><dd class="num">${pct(f.leadToPaid, 1)}</dd>
+      <dt>Qualified lead to paid</dt><dd class="num">${pct(f.qualifiedToPaid, 1)}</dd>
+      <dt>Discovery call show-up rate</dt><dd class="num">${pct(f.showUpRate)}</dd>
+      <dt>Organic + referral leads</dt><dd class="num">${f.organic} of ${f.total}</dd>
+      <dt>Average days in funnel (to paid or drop)</dt><dd class="num">${f.avgJourney == null ? "–" : f.avgJourney.toFixed(1)}</dd>`;
+    const rs = Object.entries(f.dropReasons).sort((a, b) => b[1] - a[1]);
+    $("reasons").innerHTML = rs.length ? rs.map(([k, v]) => `<span class="chip c-neutral">${esc(k)} · ${v}</span>`).join("") : `<span class="empty">No drops yet.</span>`;
+
+    // campaigns
+    const tones = { scale: "c-good", refresh: "c-warn", fix: "c-serious", pause: "c-bad", watch: "c-neutral", keep: "c-neutral" };
+    $("camps").innerHTML = `<thead><tr><th>Campaign</th><th>Action</th><th class="r">Spend</th><th class="r">CTR</th><th class="r">CTR vs prev</th><th class="r">Frequency</th><th class="r">Leads / seats</th><th class="r">Cost per QL / return</th></tr></thead><tbody>` +
+      (g.campaigns.length ? g.campaigns.map(c => `<tr>
+        <td>${esc(c.name)}<span class="sub">${c.objective === "program" ? "Programme" : "Workshop"} · ${esc(c.lp)}</span></td>
+        <td><span class="chip ${tones[c.decision.key]}">${c.decision.label}</span><span class="why">${esc(c.decision.why)}</span></td>
+        <td class="r">${inr(c.spend)}</td><td class="r">${c.ctr.toFixed(2)}%</td>
+        <td class="r">${c.ctrChange == null ? "–" : (c.ctrChange > 0 ? "+" : "") + Math.round(c.ctrChange) + "%"}</td>
+        <td class="r ${c.freq >= 3 ? "flag" : ""}">${c.freq == null ? "–" : c.freq.toFixed(1)}</td>
+        <td class="r">${c.objective === "program" ? `${c.leads} leads<span class="sub">${c.qualified} qualified</span>` : `${c.seats} seats`}</td>
+        <td class="r">${c.objective === "program" ? (c.cpql ? inr(c.cpql) : "no QL") : (c.roas != null ? c.roas.toFixed(1) + "×" : "–")}</td></tr>`).join("")
+      : `<tr><td colspan="8" class="empty">No ads ran in this period.</td></tr>`) + `</tbody>`;
+
+    // ads
+    const ads = g.creatives, maxCtr = ads.length ? ads[0].ctr : 1;
+    const adRow = a => `<li><span>${esc(a.name)}<span class="sub">${esc(a.campaign)}</span></span><span class="num">${a.ctr.toFixed(2)}%${a.freq >= 3 ? ` <span class="chip c-warn">freq ${a.freq.toFixed(1)}</span>` : ""}</span><span class="bar"><i style="width:${a.ctr / maxCtr * 100}%"></i></span></li>`;
+    $("ads").innerHTML = ads.length ? `<h4 class="adh">Best 3: learn from these</h4><ul class="ads">${ads.slice(0, 3).map(adRow).join("")}</ul><h4 class="adh">Weakest 3: replace these</h4><ul class="ads">${ads.slice(-3).reverse().map(adRow).join("")}</ul>` : `<p class="empty">No ads with enough views.</p>`;
+
+    // landing pages
+    $("lps").innerHTML = `<thead><tr><th>Page</th><th class="r">Visits</th><th class="r">Left at once</th><th class="r">Load time</th></tr></thead><tbody>` +
+      (g.landingPages.length ? g.landingPages.map(l => `<tr><td>${esc(l.name)}<span class="sub">${esc(l.path)}</span></td><td class="r">${l.views.toLocaleString("en-IN")}</td>
+        <td class="r ${l.bounce > 55 ? "flag" : ""}">${pct(l.bounce)}</td><td class="r ${l.loadMs > 3000 ? "flag" : ""}">${(l.loadMs / 1000).toFixed(1)} s</td></tr>`).join("") : `<tr><td colspan="4" class="empty">No visits.</td></tr>`) + `</tbody>`;
+
+    // follow-ups
+    $("unpaid").innerHTML = `<thead><tr><th>Family</th><th>Invoice</th><th class="r">Amount</th><th class="r">Status</th></tr></thead><tbody>` +
+      (g.unpaid.length ? g.unpaid.map(u => `<tr><td>${esc(u.name)}<span class="sub">${u.product === "trial_3m" ? "3-month trial" : "Full programme"}</span></td><td class="num">${u.invoice}<span class="sub">Issued ${fmtD(u.issued)}</span></td>
+        <td class="r">${inr(u.amount)}</td><td class="r">${u.overdue > 0 ? `<span class="chip ${u.overdue > 30 ? "c-bad" : "c-warn"}">${u.overdue} days late</span>` : `<span class="chip c-neutral">due ${fmtD(u.due)}</span>`}</td></tr>`).join("") : `<tr><td colspan="4" class="empty">Nothing unpaid.</td></tr>`) + `</tbody>`;
+    $("renew").innerHTML = `<thead><tr><th>Student</th><th>Trial started</th><th class="r">Ends</th><th class="r">Days left</th></tr></thead><tbody>` +
+      (g.renewals.length ? g.renewals.map(x => `<tr><td>${esc(x.name)}</td><td class="num">${fmtD(x.start)}</td><td class="r">${fmtD(x.end)}</td>
+        <td class="r"><span class="chip ${x.daysLeft <= 14 ? "c-warn" : "c-neutral"}">${x.daysLeft} days</span></td></tr>`).join("") : `<tr><td colspan="4" class="empty">No trials end in the next 30 days.</td></tr>`) + `</tbody>`;
+
+    bindTips(document);
+  }
+
+  // ---------- controls
+  const sel = $("period"), c0 = $("d0"), c1 = $("d1");
+  c0.min = c1.min = "2026-04-01"; c0.max = c1.max = AS_OF;
+  function apply() {
+    let r;
+    if (sel.value === "custom") {
+      $("custom").hidden = false;
+      if (!c0.value || !c1.value) { const lm = rangeFor("lm"); c0.value = lm[0]; c1.value = lm[1]; }
+      if (c0.value > c1.value) { const t = c0.value; c0.value = c1.value; c1.value = t; }
+      r = [c0.value, c1.value];
+    } else { $("custom").hidden = true; r = rangeFor(sel.value); }
+    try { localStorage.setItem("gtm.period", sel.value); } catch (e) {}
+    render(r[0], r[1]);
+  }
+  try { const saved = localStorage.getItem("gtm.period"); if (saved && saved !== "custom") sel.value = saved; } catch (e) {}
+  sel.addEventListener("change", apply); c0.addEventListener("change", apply); c1.addEventListener("change", apply);
+  apply();
+})();
+</script>

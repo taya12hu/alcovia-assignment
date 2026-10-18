@@ -1,0 +1,47 @@
+{
+  "name": "03 Daily advisor alerts (missed deadlines, syllabus behind)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [ { "field": "cronExpression", "expression": "30 21 * * *" } ] } },
+      "id": "c3f0c003-0000-4000-8000-000000000001",
+      "name": "Every day 21:30 IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Students with 3+ tasks overdue in the last 7 days, or whose last exam is 10+ points under target.\n-- Same rules as the 'Needs attention' list on the student dashboard.\nWITH overdue AS (\n  SELECT student_id, COUNT(*) AS n FROM tasks\n  WHERE due_on BETWEEN CURRENT_DATE - 7 AND CURRENT_DATE - 1 AND completed_on IS NULL\n  GROUP BY student_id HAVING COUNT(*) >= 3\n)\nSELECT s.student_id, s.display_name, o.n AS overdue_tasks, s.advisor_clickup_list_id\nFROM overdue o JOIN students s USING (student_id);"
+      },
+      "id": "c3f0c003-0000-4000-8000-000000000002",
+      "name": "Find students needing help",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [220, 300],
+      "credentials": { "postgres": { "id": "REPLACE_ME", "name": "Alcovia analytics DB" } }
+    },
+    {
+      "parameters": {
+        "resource": "task",
+        "operation": "create",
+        "list": "={{ $json.advisor_clickup_list_id }}",
+        "name": "=Check in with {{ $json.display_name }}: {{ $json.overdue_tasks }} tasks overdue this week",
+        "additionalFields": { "priority": 2, "tags": ["auto-alert", "student-progress"], "content": "Created by n8n from the student progress rules. Close this task once you have spoken to the student and updated the timetable." }
+      },
+      "id": "c3f0c003-0000-4000-8000-000000000003",
+      "name": "Create ClickUp task for advisor",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [440, 300],
+      "credentials": { "clickUpApi": { "id": "REPLACE_ME", "name": "ClickUp" } }
+    }
+  ],
+  "connections": {
+    "Every day 21:30 IST": { "main": [[{ "node": "Find students needing help", "type": "main", "index": 0 }]] },
+    "Find students needing help": { "main": [[{ "node": "Create ClickUp task for advisor", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Kolkata" },
+  "pinData": {},
+  "meta": { "note": "Prototype export. Needs students.advisor_clickup_list_id (planned column, not in the demo schema). Not yet run live." }
+}

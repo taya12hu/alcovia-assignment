@@ -1,0 +1,281 @@
+<meta charset="utf-8">
+<title>Alcovia Student Progress</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../shared.css">
+<style>
+/* Student view: three tabs (cohort, one student, programme KPIs). Chapter stages use one blue ramp, green = exam ready. */
+:root { --st1: #b7d3f6; --st2: #86b6ef; --st3: #5598e7; --st4: #256abf; --st5: #1d7f46 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --st1: #184f95; --st2: #256abf; --st3: #3987e5; --st4: #86b6ef; --st5: #5cc98a } }
+:root[data-theme="dark"] { --st1: #184f95; --st2: #256abf; --st3: #3987e5; --st4: #86b6ef; --st5: #5cc98a }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-top: -4px }
+.tabs button { font: 600 14px var(--f-ui); color: var(--ink-2); background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; margin-bottom: -1px }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent) }
+.tabs button:hover { color: var(--ink) }
+.pace { position: relative; height: 8px; background: var(--line-2); border-radius: 4px; min-width: 90px }
+.pace > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--s1) }
+.pace > b { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--ink) }
+.pacecell { display: grid; grid-template-columns: 90px auto; gap: 8px; align-items: center }
+tr.click { cursor: pointer } tr.click:hover td { background: var(--line-2) }
+.flags { display: flex; flex-wrap: wrap; gap: 4px }
+.attn { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+.attn li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line-2) }
+.attn li:last-child { border-bottom: 0 }
+.attn .who { font-weight: 600 } .attn .act { color: var(--ink-2); font-size: 13px }
+.attn button { justify-self: start }
+.linkbtn { font: 600 12.5px var(--f-ui); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer }
+.subjects { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px }
+.chgrid { display: flex; flex-wrap: wrap; gap: 3px; margin: 8px 0 }
+.chgrid span { width: 18px; height: 18px; border-radius: 3px; background: var(--line-2); outline-offset: 1px }
+.chgrid span.low { box-shadow: inset 0 0 0 2px var(--serious) }
+.stagekey { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--ink-2) }
+.stagekey span { display: inline-flex; gap: 5px; align-items: center }
+.stagekey i { width: 11px; height: 11px; border-radius: 2px; display: inline-block }
+.weekbars { display: flex; align-items: flex-end; gap: 4px; height: 70px; margin: 6px 0 4px }
+.weekbars span { flex: 1; background: var(--s1); border-radius: 3px 3px 0 0; min-height: 2px }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 900px) { .three { grid-template-columns: 1fr } }
+.dim { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px }
+.d-q { background: var(--accent-soft); color: var(--accent) }
+th.grp { text-align: center; border-bottom: 0; padding-bottom: 0 }
+.pick { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Alcovia Student Progress <span class="tag">Synthetic data</span></h1>
+      <p id="asof">Academic rigour, daily habits and programme quality for every Alcovian</p>
+    </div>
+    <div class="controls">
+      <label for="period">Period</label>
+      <select id="period">
+        <option value="l7">Last 7 days</option>
+        <option value="l30" selected>Last 30 days</option>
+        <option value="mtd">This month to date</option>
+        <option value="lm">Last month</option>
+        <option value="ytd">Since April (year to date)</option>
+      </select>
+    </div>
+    <div class="range-note" id="rangeNote"></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button role="tab" id="t-overview" aria-selected="true" aria-controls="p-overview">Cohort overview</button>
+      <button role="tab" id="t-student" aria-selected="false" aria-controls="p-student">One student</button>
+      <button role="tab" id="t-programme" aria-selected="false" aria-controls="p-programme">Programme KPIs</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- OVERVIEW -->
+  <div id="p-overview" role="tabpanel" aria-labelledby="t-overview" style="display:grid;gap:28px">
+    <section>
+      <h2>This period at a glance</h2>
+      <p class="lede">Syllabus pace is measured as of the last day of the period. A chapter only counts as covered once practice questions are done at 70%+ accuracy. Expected pace is 25% of the syllabus per quarter from 1 April.</p>
+      <div class="tiles" id="tiles"></div>
+    </section>
+    <section>
+      <div class="grid2">
+        <div class="card"><h3>All active students <small>click a row to open the student</small></h3><div class="tablewrap"><table id="roster"></table></div></div>
+        <div class="card"><h3>Needs attention this week</h3><p class="sub" style="margin:-4px 0 10px">Generated from the rules on each student's data. Advisors confirm each action in the weekly review.</p><ul class="attn" id="attn"></ul></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ONE STUDENT -->
+  <div id="p-student" role="tabpanel" aria-labelledby="t-student" hidden style="display:grid;gap:28px">
+    <section>
+      <div class="pick"><label for="who" class="sub" style="display:inline;font-weight:600">Student</label><select id="who"></select><span id="whoMeta" class="sub" style="display:inline"></span></div>
+      <div class="tiles" id="sTiles"></div>
+    </section>
+    <section>
+      <h2>Subjects and chapter readiness</h2>
+      <p class="lede">Each square is a chapter, coloured by how far it has got through the rigour. An orange outline means practice was attempted but scored under 70%.</p>
+      <div class="stagekey" id="stageKey" style="margin-bottom:10px"></div>
+      <div class="subjects" id="subjects"></div>
+    </section>
+    <section>
+      <h2>Habits, activities and roadmap</h2>
+      <div class="three">
+        <div class="card"><h3>Daily rigour</h3><dl class="kv" id="sHabits"></dl><h3 style="margin-top:14px">Focus minutes by week</h3><div class="weekbars" id="weeks"></div><p class="sub" id="weeksNote"></p></div>
+        <div class="card"><h3>Programme activities</h3><div id="sActs"></div></div>
+        <div class="card"><h3>Roadmap milestones</h3><div id="sMiles"></div><h3 style="margin-top:14px">Wellness</h3><div id="sWell"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- PROGRAMME -->
+  <div id="p-programme" role="tabpanel" aria-labelledby="t-programme" hidden style="display:grid;gap:28px">
+    <section>
+      <h2>Programme KPIs</h2>
+      <p class="lede">Every activity is measured three ways: did Alcovia run it (quantity), did Alcovians value it (quality), and did it change anything for them (student performance). Ratings come from a one-question form after each activity; outcome scores come from the facilitator's rubric.</p>
+      <div class="card"><div class="tablewrap"><table id="prog"></table></div></div>
+    </section>
+    <section>
+      <h2>Daily and weekly rigour across the cohort</h2>
+      <div class="card"><div class="tablewrap"><table id="daily"></table></div></div>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">
+  <p><b>About this data.</b> Every name and number is made up to show how the dashboard works. In production it reads the app database (chapters, tasks, focus sessions, quizzes, wearables) and activity records collected through a short form after each session. Formulas match <span class="num">sql/student_kpis.sql</span>, and a test checks that they agree. App activity in this demo covers 19 Aug to 17 Oct 2026.</p>
+</footer>
+<div id="tip" hidden></div>
+
+<script src="data.js"></script>
+<script src="metrics.js"></script>
+<script>
+(function () {
+  const D = window.DATA, S = window.STU, AS_OF = D.asOf;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const pct = (n, d = 0) => n == null ? "–" : n.toFixed(d) + "%";
+  const num = (n, d = 0) => n == null ? "–" : n.toFixed(d);
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fmtD = iso => +iso.slice(8) + " " + MON[+iso.slice(5, 7) - 1];
+  const fmtDY = iso => fmtD(iso) + " " + iso.slice(0, 4);
+  const median = xs => { const a = xs.filter(x => x != null).sort((p, q) => p - q); return a.length ? a[a.length >> 1] : null; };
+  const avg = xs => { const a = xs.filter(x => x != null); return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null; };
+  const STAGE_C = ["var(--line-2)", "var(--st1)", "var(--st2)", "var(--st3)", "var(--st4)", "var(--st5)"];
+  const PACE = { on_track: ["c-good", "On track"], at_risk: ["c-warn", "At risk"], behind: ["c-bad", "Behind"] };
+  const SEV = { bad: "c-bad", warn: "c-warn", neutral: "c-neutral" };
+  $("asof").textContent = "Data as of " + fmtDY(AS_OF) + " · built to show the dashboard, not real results";
+
+  function rangeFor(k) {
+    const t = AS_OF, m0 = t.slice(0, 8) + "01";
+    return { l7: [S.addDays(t, -6), t], l30: [S.addDays(t, -29), t], mtd: [m0, t],
+             lm: (() => { const e = S.addDays(m0, -1); return [e.slice(0, 8) + "01", e]; })(), ytd: ["2026-04-01", t] }[k];
+  }
+
+  // tooltips
+  const tip = $("tip");
+  function moveTip(e) { tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = Math.max(8, e.clientY - tip.offsetHeight - 10) + "px"; }
+  document.addEventListener("mousemove", e => { if (!tip.hidden) moveTip(e); });
+  function bindTips(root) {
+    root.querySelectorAll("[data-tip]").forEach(el => {
+      el.onmouseenter = e => { tip.innerHTML = el.getAttribute("data-tip"); tip.hidden = false; moveTip(e); };
+      el.onmouseleave = () => { tip.hidden = true; };
+      el.onfocus = () => { const r = el.getBoundingClientRect(); tip.innerHTML = el.getAttribute("data-tip"); tip.hidden = false; moveTip({ clientX: r.left, clientY: r.top }); };
+      el.onblur = () => { tip.hidden = true; };
+    });
+  }
+
+  let state = { period: "l30", tab: "overview", student: null }, data;
+
+  function renderOverview() {
+    const rows = data.rows, n = rows.length;
+    const onTrack = rows.filter(r => r.syl.status === "on_track").length;
+    const needs = rows.filter(r => r.flags.some(f => f.sev === "bad")).length;
+    const tc = avg(rows.map(r => r.h.taskCompletion)), focusMed = median(rows.map(r => r.h.focusPerWeek));
+    const users = rows.filter(r => r.h.focusSessions > 0).length;
+    const quiz = avg(rows.map(r => r.h.quizParticipation)), att = avg(rows.map(r => r.h.attendance));
+    $("tiles").innerHTML = `
+      <div class="tile"><span class="k">Active students</span><span class="v">${n}</span><span class="s">Expected syllabus covered: <span class="num">${pct(data.expected)}</span></span></div>
+      <div class="tile"><span class="k">On track with syllabus</span><span class="v">${onTrack} <span class="chip ${onTrack / n >= 0.7 ? "c-good" : "c-warn"}">${pct(onTrack / n * 100)}</span></span><span class="s">${rows.filter(r => r.syl.status === "behind").length} behind · ${rows.filter(r => r.syl.status === "at_risk").length} at risk</span></div>
+      <div class="tile"><span class="k">Average readiness score</span><span class="v">${num(avg(rows.map(r => r.syl.readiness)))}</span><span class="s">out of 100, across all chapters</span></div>
+      <div class="tile"><span class="k">Task completion</span><span class="v">${pct(tc)}</span><span class="s">On time: ${pct(avg(rows.map(r => r.h.deadlineAdherence)))}</span></div>
+      <div class="tile"><span class="k">Focus timer users</span><span class="v">${users} <span class="sub" style="display:inline">of ${n}</span></span><span class="s">Median ${num(focusMed)} min a week</span></div>
+      <div class="tile"><span class="k">8pm quiz participation</span><span class="v">${pct(quiz)}</span><span class="s">Average score ${pct(avg(rows.map(r => r.h.quizAvg)))}</span></div>
+      <div class="tile"><span class="k">Activity attendance</span><span class="v">${pct(att)}</span><span class="s">${needs} students need an advisor action</span></div>`;
+
+    const sorted = [...rows].sort((a, b) => a.syl.gap - b.syl.gap);
+    $("roster").innerHTML = `<thead><tr><th>Student</th><th>Syllabus vs pace</th><th class="r">Readiness</th><th class="r">Tasks done</th><th class="r">Focus / wk</th><th class="r">Quiz</th><th>Flags</th></tr></thead><tbody>` +
+      sorted.map(r => `<tr class="click" data-id="${r.id}" tabindex="0">
+        <td>${esc(r.name)}<span class="sub">Class ${r.grade}</span></td>
+        <td><div class="pacecell"><span class="pace" data-tip="${esc(`<b>${pct(r.syl.coverage)}</b> covered with rigour<br>Expected by now: <b>${pct(r.syl.expected)}</b>`)}"><i style="width:${r.syl.coverage}%"></i><b style="left:${r.syl.expected}%"></b></span><span class="chip ${PACE[r.syl.status][0]}">${PACE[r.syl.status][1]}</span></div></td>
+        <td class="r">${num(r.syl.readiness)}</td><td class="r">${pct(r.h.taskCompletion)}</td><td class="r">${num(r.h.focusPerWeek)} min</td><td class="r">${pct(r.h.quizAvg)}</td>
+        <td><div class="flags">${r.flags.filter(f => f.sev !== "neutral").map(f => `<span class="chip ${SEV[f.sev]}">${esc(f.label)}</span>`).join("") || `<span class="sub">–</span>`}</div></td></tr>`).join("") + `</tbody>`;
+    $("roster").querySelectorAll("tr.click").forEach(tr => {
+      const go = () => { state.student = tr.dataset.id; setTab("student"); };
+      tr.onclick = go; tr.onkeydown = e => { if (e.key === "Enter") go(); };
+    });
+
+    const attn = rows.flatMap(r => r.flags.filter(f => f.sev === "bad").map(f => ({ r, f })))
+      .sort((a, b) => a.r.syl.gap - b.r.syl.gap).slice(0, 12);
+    $("attn").innerHTML = attn.length ? attn.map(({ r, f }) => `<li><span class="who">${esc(r.name)} <span class="chip c-bad">${esc(f.label)}</span></span><span class="act">${esc(f.action)}</span><button class="linkbtn" data-id="${r.id}">Open ${esc(r.name.split(" ")[0])}'s view</button></li>`).join("")
+      : `<li class="empty">Nobody needs an action this week.</li>`;
+    $("attn").querySelectorAll("button").forEach(b => b.onclick = () => { state.student = b.dataset.id; setTab("student"); });
+  }
+
+  function renderStudent() {
+    const rows = [...data.rows].sort((a, b) => a.name.localeCompare(b.name));
+    if (!state.student || !rows.find(r => r.id === state.student)) state.student = [...data.rows].sort((a, b) => a.syl.gap - b.syl.gap)[0].id;
+    $("who").innerHTML = rows.map(r => `<option value="${r.id}" ${r.id === state.student ? "selected" : ""}>${esc(r.name)}</option>`).join("");
+    const r = data.rows.find(x => x.id === state.student), h = r.h, sy = r.syl;
+    $("whoMeta").textContent = `Class ${r.grade} · joined ${fmtDY(r.joined)}`;
+    $("sTiles").innerHTML = `
+      <div class="tile"><span class="k">Syllabus covered with rigour</span><span class="v">${pct(sy.coverage)} <span class="chip ${PACE[sy.status][0]}">${PACE[sy.status][1]}</span></span><span class="s">Expected by now ${pct(sy.expected)} (${sy.gap >= 0 ? "+" : ""}${num(sy.gap)} pts)</span></div>
+      <div class="tile"><span class="k">Readiness score</span><span class="v">${num(sy.readiness)}</span><span class="s">Process followed on ${pct(sy.rigourAdherence)} of started chapters</span></div>
+      <div class="tile"><span class="k">Tasks done</span><span class="v">${h.tasksDone}/${h.tasksDue}</span><span class="s">${pct(h.deadlineAdherence)} on time · estimates ${pct(h.estimateAccuracy)} accurate</span></div>
+      <div class="tile"><span class="k">Focus time</span><span class="v">${h.focusMinutes} min</span><span class="s">${h.focusSessions} sessions · ${num(h.focusPerWeek)} min a week</span></div>
+      <div class="tile"><span class="k">Actions for the advisor</span><span class="v">${r.flags.length}</span><span class="s">${r.flags.length ? esc(r.flags[0].action) : "Nothing to act on"}</span></div>`;
+
+    $("stageKey").innerHTML = S.STAGES.map((s, i) => `<span><i style="background:${STAGE_C[i]}"></i>${i}. ${s} <span class="num">(${S.READINESS[i]} pts)</span></span>`).join("");
+    $("subjects").innerHTML = sy.subjects.map(s => {
+      const ex = s.lastExam;
+      return `<div class="card"><h3>${esc(s.name)} <small>${s.rigorous} of ${s.total} chapters covered</small></h3>
+        <div class="pacecell" style="grid-template-columns:minmax(0,1fr) auto"><span class="pace"><i style="width:${s.coverage}%"></i><b style="left:${s.expected}%"></b></span><span class="num">${pct(s.coverage)}</span></div>
+        <div class="chgrid">${s.chapters.map(c => `<span tabindex="0" class="${c.practiceLow ? "low" : ""}" style="background:${STAGE_C[c.stage]}" data-tip="${esc(`<b>${c.name}</b><br>${S.STAGES[c.stage]}${c.accuracy != null ? `<br>Latest accuracy: <b>${c.accuracy}%</b>` : ""}${c.practiceLow ? "<br>Practice under 70%: redo before moving on" : ""}`)}"></span>`).join("")}</div>
+        <dl class="kv"><dt>Readiness score</dt><dd class="num">${num(s.readiness)}</dd><dt>Exam ready chapters</dt><dd class="num">${s.ready}</dd>
+        <dt>Latest exam vs target</dt><dd class="num">${ex ? `${ex.score}% / ${ex.target}% <span class="chip ${ex.gap >= 0 ? "c-good" : ex.gap > -10 ? "c-warn" : "c-bad"}">${ex.gap >= 0 ? "+" : ""}${ex.gap}</span>` : `target ${s.target ?? "–"}%`}</dd></dl></div>`;
+    }).join("");
+
+    $("sHabits").innerHTML = `<dt>Task completion</dt><dd class="num">${pct(h.taskCompletion)}</dd><dt>Deadline adherence</dt><dd class="num">${pct(h.deadlineAdherence)}</dd>
+      <dt>Time estimate accuracy</dt><dd class="num">${pct(h.estimateAccuracy)}</dd><dt>Focus sessions finished</dt><dd class="num">${pct(h.focusCompletion)}</dd>
+      <dt>Days since last focus session</dt><dd class="num">${h.daysSinceFocus ?? "never"}</dd><dt>8pm quiz attempted</dt><dd class="num">${pct(h.quizParticipation)}</dd><dt>Quiz average</dt><dd class="num">${pct(h.quizAvg)}</dd>`;
+    const mx = Math.max(60, ...h.focusByWeek);
+    $("weeks").innerHTML = h.focusByWeek.map((m, i) => `<span tabindex="0" data-tip="${esc(`Week ${i + 1}: <b>${m} min</b>`)}" style="height:${m / mx * 100}%"></span>`).join("");
+    $("weeksNote").textContent = h.focusByWeek.length > 1 ? `${h.focusByWeek.length} weeks, oldest on the left.` : "";
+
+    $("sActs").innerHTML = h.activities.length ? `<ul class="ads">${h.activities.slice(0, 8).map(p => `<li><span>${esc(p.a.title)}<span class="sub">${S.TYPES[p.a.activity_type]} · ${fmtD(p.a.held_on)}</span></span><span>${p.attended ? (p.rating ? `<span class="chip c-neutral">${p.rating}/5</span>` : `<span class="chip c-neutral">attended</span>`) : `<span class="chip c-warn">missed</span>`}</span></li>`).join("")}</ul><p class="sub">${h.activitiesAttended} of ${h.activitiesInvited} attended in this period.</p>` : `<p class="empty">No activities in this period.</p>`;
+    const ms = h.milestones;
+    $("sMiles").innerHTML = ms.length ? `<dl class="kv">${["career", "personal", "academic"].map(t => { const m = ms.filter(x => x.track === t); return m.length ? `<dt>${t[0].toUpperCase() + t.slice(1)}</dt><dd class="num">${m.filter(x => x.done_on).length} of ${m.length} done</dd>` : ""; }).join("")}</dl>` : `<p class="empty">No milestones were due in this period.</p>`;
+    $("sWell").innerHTML = h.wearable ? `<dl class="kv"><dt>Device</dt><dd>${h.wearable.device}</dd><dt>Average sleep</dt><dd class="num">${num(h.wearable.sleep, 1)} h</dd><dt>Average recovery</dt><dd class="num">${pct(h.wearable.recovery)}</dd><dt>Active minutes a day</dt><dd class="num">${num(h.wearable.active)}</dd></dl>` : `<p class="empty">No wearable connected. Data appears once the family consents and connects a device.</p>`;
+    bindTips($("p-student"));
+  }
+
+  function renderProgramme() {
+    const P = data.programme.filter(p => p.planned);
+    const tone = (v, good, ok) => v == null ? "" : v >= good ? "c-good" : v >= ok ? "c-warn" : "c-bad";
+    $("prog").innerHTML = `<thead><tr><th></th><th class="grp" colspan="3"><span class="dim d-q">Quantity</span></th><th class="grp" colspan="2"><span class="dim d-q">Quality</span></th><th class="grp" colspan="2"><span class="dim d-q">Student performance</span></th></tr>
+      <tr><th>Activity</th><th class="r">Held / planned</th><th class="r">Attendance</th><th class="r">Students reached</th><th class="r">Avg rating</th><th class="r">Rated 4+</th><th class="r">Outcome score</th><th class="r">Follow-up done</th></tr></thead><tbody>` +
+      (P.length ? P.map(p => `<tr><td>${p.label}</td>
+        <td class="r">${p.held}/${p.planned} <span class="chip ${tone(p.heldPct, 90, 75)}">${pct(p.heldPct)}</span></td>
+        <td class="r">${pct(p.attendance)}</td><td class="r">${p.reach}</td>
+        <td class="r">${p.rating == null ? "–" : p.rating.toFixed(1) + "/5"}</td><td class="r">${pct(p.promoters)}</td>
+        <td class="r">${num(p.outcome)}</td><td class="r">${p.followUp == null ? "–" : `<span class="chip ${tone(p.followUp, 60, 45)}">${pct(p.followUp)}</span>`}</td></tr>`).join("")
+      : `<tr><td colspan="8" class="empty">No activities were planned in this period.</td></tr>`) + `</tbody>`;
+    const rows = data.rows;
+    const line = (name, q, ql, perf) => `<tr><td>${name}</td><td>${q}</td><td>${ql}</td><td>${perf}</td></tr>`;
+    $("daily").innerHTML = `<thead><tr><th>Rigour</th><th><span class="dim d-q">Quantity</span></th><th><span class="dim d-q">Quality</span></th><th><span class="dim d-q">Student performance</span></th></tr></thead><tbody>` +
+      line("8pm daily quiz", `Attempted on ${pct(avg(rows.map(r => r.h.quizParticipation)))} of days`, "Rating prompt after quiz (to add)", `Average score ${pct(avg(rows.map(r => r.h.quizAvg)))}`) +
+      line("Timetable and tasks", `${rows.reduce((s, r) => s + r.h.tasksDue, 0)} tasks due`, `Estimates ${pct(avg(rows.map(r => r.h.estimateAccuracy)))} accurate`, `${pct(avg(rows.map(r => r.h.taskCompletion)))} done · ${pct(avg(rows.map(r => r.h.deadlineAdherence)))} on time`) +
+      line("Focus time", `${rows.filter(r => r.h.focusSessions).length} of ${rows.length} students used it`, `${pct(avg(rows.map(r => r.h.focusCompletion)))} of sessions finished`, `Median ${num(median(rows.map(r => r.h.focusPerWeek)))} min a week`) +
+      line("Syllabus rigour", `${rows.reduce((s, r) => s + r.syl.subjects.reduce((t, x) => t + x.started, 0), 0)} chapters started`, `Process followed on ${pct(avg(rows.map(r => r.syl.rigourAdherence)))} of them`, `Readiness ${num(avg(rows.map(r => r.syl.readiness)))} / 100`) +
+      line("Wellness (wearables)", `${rows.filter(r => r.h.wearable).length} of ${rows.length} connected`, "Consent-based", rows.filter(r => r.h.wearable).length ? `Sleep ${num(avg(rows.filter(r => r.h.wearable).map(r => r.h.wearable.sleep)), 1)} h · recovery ${pct(avg(rows.filter(r => r.h.wearable).map(r => r.h.wearable.recovery)))}` : "–") + `</tbody>`;
+  }
+
+  function setTab(t) {
+    state.tab = t;
+    for (const k of ["overview", "student", "programme"]) { $("t-" + k).setAttribute("aria-selected", k === t); $("p-" + k).hidden = k !== t; }
+    render();
+    window.scrollTo({ top: 0 });
+  }
+
+  function render() {
+    const [d0, d1] = rangeFor(state.period);
+    data = S.computeStudents(D, d0, d1);
+    $("rangeNote").textContent = `Showing ${fmtDY(d0)} to ${fmtDY(d1)}. Syllabus status is as of ${fmtDY(data.asOf)}.`;
+    if (state.tab === "overview") renderOverview(); else if (state.tab === "student") renderStudent(); else renderProgramme();
+    bindTips(document);
+  }
+
+  $("period").onchange = e => { state.period = e.target.value; render(); };
+  $("who").onchange = e => { state.student = e.target.value; render(); };
+  for (const k of ["overview", "student", "programme"]) $("t-" + k).onclick = () => setTab(k);
+  const hash = location.hash.slice(1); if (["overview", "student", "programme"].includes(hash)) state.tab = hash;
+  setTab(state.tab);
+})();
+</script>

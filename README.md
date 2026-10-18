@@ -8,8 +8,8 @@ Working proof for the strategy document: two live dashboards, one shared data mo
 
 | Dashboard | What it shows | Link |
 |---|---|---|
-| GTM tracker | Revenue vs target, trial vs full programme, workshops, cash, unpaid invoices, renewals, lead funnel, campaign decisions, ad and landing-page health. Period selector updates everything. | https://claude.ai/artifact/V7z5UBtUMGLQySKtWT5VwX |
-| Student progress | Cohort overview with syllabus pace, one-student view with chapter readiness, and programme KPIs (quantity, quality, performance) | https://claude.ai/artifact/XKzJxeCPqB8iwKeb6fW5wG |
+| GTM tracker | Revenue vs target, trial vs full programme, workshops, cash, unpaid invoices, renewals, lead funnel, campaign decisions, ad and landing-page health. Period selector updates everything. | https://taya12hu.github.io/alcovia-assignment/dist/gtm-tracker.html |
+| Student progress | Cohort overview with syllabus pace, one-student view with chapter readiness, and programme KPIs (quantity, quality, performance) | https://taya12hu.github.io/alcovia-assignment/dist/student-progress.html |
 
 Both are also in `dist/` as single HTML files that open in any browser, with no server needed.
 
